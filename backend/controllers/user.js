@@ -34,7 +34,7 @@ exports.login = (req, res, next) => {
             userId: user._id,
             token: jwt.sign(
               { userId: user._id },
-              "UkFORE9NX1RPS0VOX1NFQ1JFVA==", // salt the secret key with base64
+              process.env.SECRET_KEY_SALTED,
               {
                 expiresIn: "24h",
               }
