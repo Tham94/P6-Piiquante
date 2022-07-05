@@ -21,6 +21,7 @@ exports.createSauce = (req, res) => {
 };
 
 exports.modifyingSauce = (req, res) => {
+  const filterById = { _id: req.params.id };
   const sauceObject = req.file
     ? {
         ...JSON.parse(req.body.sauce),
@@ -30,14 +31,11 @@ exports.modifyingSauce = (req, res) => {
       }
     : { ...req.body };
   delete sauceObject._userId;
-  Sauce.findOne({ _id: req.params.id }).then((sauce) => {
+  Sauce.findOne(filterById).then((sauce) => {
     if (sauce.userId != req.auth.userId) {
       res.status(401).json({ message: "Not authorized" });
     } else {
-      Sauce.updateOne(
-        { _id: req.params.id },
-        { ...sauceObject, _id: req.params.id }
-      )
+      Sauce.updateOne(filterById, { ...sauceObject, _id: req.params.id })
         .then(() =>
           res.status(200).json({ message: `${req.body.name} sauce modified!` })
         )
@@ -47,14 +45,15 @@ exports.modifyingSauce = (req, res) => {
 };
 
 exports.deleteSauce = async (req, res) => {
+  const filterById = { _id: req.params.id };
   try {
-    const sauce = await Sauce.findOne({ _id: req.params.id });
+    const sauce = await Sauce.findOne(filterById);
     if (sauce.userId != req.auth.userId) {
       res.status(401).json({ message: "Unauthorized user" });
     } else {
       const filename = sauce.imageUrl.split("/images/")[1];
       fs.unlink(`images/${filename}`, () => {
-        Sauce.deleteOne({ _id: req.params.id })
+        Sauce.deleteOne(filterById)
           .then(() =>
             res.status(200).json({ message: `${sauce.name} sauce deleted!` })
           )
@@ -86,54 +85,64 @@ exports.getAllSauces = async (req, res) => {
 
 exports.likeSauce = async (req, res) => {
   const likeStatus = req.body.like;
-  const userId = req.body.userId;
+  const authUserId = req.auth.userId;
+  const filterById = { _id: req.params.id };
+
+  const addLike = {
+    $inc: { likes: +1 },
+    $push: { usersLiked: authUserId },
+  };
+  const addDislike = {
+    $inc: { dislikes: +1 },
+    $push: { usersDisliked: authUserId },
+  };
+  const removeLike = {
+    $inc: { likes: -1 },
+    $pull: { usersLiked: authUserId },
+  };
+  const removeDislike = {
+    $inc: { dislikes: -1 },
+    $pull: { usersDisliked: authUserId },
+  };
 
   try {
-    const sauce = await Sauce.findOne({ _id: req.params.id });
+    const sauce = await Sauce.findOne(filterById);
     switch (likeStatus) {
       case 1: {
-        Sauce.updateOne(
-          { _id: req.params.id },
-          {
-            $inc: { likes: +1 },
-            $push: { usersLiked: userId },
-          }
-        );
-        res.status(201).json({ message: `${sauce.name} sauce liked` });
+        if (!sauce.usersLiked.includes(authUserId)) {
+          await Sauce.findOneAndUpdate(filterById, addLike, { new: true });
+          res.status(201).json({ message: `You like ${sauce.name} sauce ` });
+        } else {
+          return;
+        }
 
         break;
       }
       case -1: {
-        Sauce.updateOne(
-          { _id: req.params.id },
-          {
-            $inc: { dislikes: +1 },
-            $push: { usersDisliked: userId },
-          }
-        );
-        res.status(201).json({ message: `${sauce.name} sauce disliked` });
+        if (!sauce.usersDisliked.includes(authUserId)) {
+          await Sauce.findOneAndUpdate(filterById, addDislike, { new: true });
+          res.status(201).json({ message: `You dislike ${sauce.name} sauce` });
+        } else {
+          return;
+        }
 
         break;
       }
       case 0: {
-        if (sauce.usersLiked.includes(userId)) {
-          Sauce.updateOne(
-            { _id: req.params.id },
-            { $inc: { likes: -1 }, $pull: { usersliked: userId } }
-          );
+        if (sauce.usersLiked.includes(authUserId)) {
+          await Sauce.findOneAndUpdate(filterById, removeLike, { new: true });
           res
             .status(201)
-            .json({ message: `${sauce.name} sauce to be like/disliked` });
-        }
-
-        if (sauce.usersDisliked.includes(userId)) {
-          Sauce.updateOne(
-            { _id: req.params.id },
-            { $inc: { dislikes: -1 }, $pull: { usersDisliked: userId } }
-          );
-          res
-            .status(201)
-            .json({ message: `${sauce.name} sauce to be like/disliked` });
+            .json({ message: `You removed your like on ${sauce.name}` });
+        } else if (sauce.usersDisliked.includes(authUserId)) {
+          await Sauce.findOneAndUpdate(filterById, removeDislike, {
+            new: true,
+          });
+          res.status(201).json({
+            message: `You removed your dislike on ${sauce.name} sauce`,
+          });
+        } else {
+          return;
         }
         break;
       }
