@@ -43,9 +43,8 @@ Thumbs.db
 
 
 /backend/.env
-/backend/images/*
-.jpg
-.png
-.jpeg
-.bmp
-.gif
+/backend/images/*.jpg
+/backend/images/*.png
+/backend/images/*.jpeg
+/backend/images/*.bmp
+/backend/images/*.gif
