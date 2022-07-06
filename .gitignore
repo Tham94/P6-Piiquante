@@ -44,3 +44,8 @@ Thumbs.db
 
 /backend/.env
 /backend/images/*
+.jpg
+.png
+.jpeg
+.bmp
+.gif
