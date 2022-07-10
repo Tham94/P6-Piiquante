@@ -1,1 +1,0 @@
-this file is used to not gitignore /backend/images file
