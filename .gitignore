@@ -42,7 +42,7 @@ testem.log
 Thumbs.db
 
 
-/backend/.env
+
 /backend/images/*.jpg
 /backend/images/*.png
 /backend/images/*.jpeg
