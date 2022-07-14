@@ -10,5 +10,7 @@
   - npm i password-validator
   - npm i multer
   - npm i mongoose-unique-validator
+  - npm i dotenv
+  - npm i jsonwebtoken
 
 - pour lancer le serveur, aller sur /backend et taper "node server"
